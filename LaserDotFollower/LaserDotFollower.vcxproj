@@ -19,15 +19,6 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="BasicMorphologyDemo.cpp" />
-    <ClCompile Include="BitPlaneSlicingDemo.cpp" />
-    <ClCompile Include="BlobDetectionDemo.cpp" />
-    <ClCompile Include="Demonstration.cpp" />
-    <ClCompile Include="Main.cpp" />
-    <ClCompile Include="RegionOfInterestDemo.cpp" />
-    <ClCompile Include="Source.cpp" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="Demonstration.h" />
     <ClInclude Include="Source.h" />
   </ItemGroup>
@@ -35,6 +26,9 @@
     <Image Include="Gears.bmp" />
     <Image Include="Menu.bmp" />
     <Image Include="Shapes.bmp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="LaserDotFollower.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{6ac98e11-2450-4350-b484-bc7475e46a05}</ProjectGuid>
@@ -105,11 +99,11 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>D:\Library\opencv\3.1.0\build\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Program Files\MobileRobots\Aria\include;D:\Library\opencv\3.2.0\build\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>D:\Library\opencv\3.1.0\build\x64\vc14\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>opencv_world310d.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\Program Files\MobileRobots\Aria\lib64;D:\Library\opencv\3.2.0\build\x64\vc14\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>opencv_world320d.lib;AriaDebugVC14.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">

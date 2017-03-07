@@ -1,6 +1,10 @@
 /*
+ * This program is a testbed for testing various vision algorithms that enable a Pioneer P3-DX
+ * robot to follow a laser dot, as produced by a standard laser pointer.
+ *
  * Joost van Stuijvenberg
  * Avans Hogeschool Breda
+ * March 2017
  *
  * CC BY-SA 4.0, see: https://creativecommons.org/licenses/by-sa/4.0/
  * sources & updates: https://github.com/joostvanstuijvenberg/ARIA
@@ -52,14 +56,14 @@
 
 #define CAMERA_NUMBER				1
 
-#define ROBOT_MAX_DRIVING_SPEED		500.0
-#define ROBOT_MAX_ROTATING_SPEED	100.0
+#define ROBOT_MAX_DRIVING_SPEED		50.0 //500
+#define ROBOT_MAX_ROTATING_SPEED	25.0 //100
 
 cv::Ptr<cv::SimpleBlobDetector> getBlobDetector();
 cv::Point findLaserDotByRGB(cv::Mat& image);
-cv::Point2d findLaserDotByHSV(cv::Mat& image);
-cv::Point2d findLaserDotByHSVOtsu(cv::Mat& image);
-cv::Point2d findLaserDotByBlobDetection(cv::Mat& image, cv::Ptr<cv::SimpleBlobDetector>& detector);
+cv::Point findLaserDotByHSV(cv::Mat& image);
+cv::Point findLaserDotByHSVOtsu(cv::Mat& image);
+cv::Point findLaserDotByBlobDetection(cv::Mat& image, cv::Ptr<cv::SimpleBlobDetector>& detector);
 void initRobot(ArRobot& robot, int argc, char** argv);
 void controlRobot(ArRobot& robot, double deltaX, double deltaY);
 void shutdownRobot(ArRobot& robot);
@@ -72,7 +76,7 @@ void shutdownRobot(ArRobot& robot);
 int main(int argc, char** argv)
 {
 	ArRobot robot;
-	bool robotEnabled = false;
+	bool robotEnabled = true;
 	cv::Ptr<cv::SimpleBlobDetector> detector;
 
 	// Try to open the camera.
@@ -92,7 +96,7 @@ int main(int argc, char** argv)
 
 	// Repeatedly obtain an image from the camera and try to find the red laser dot.
 	cv::Mat image;
-	cv::Point2d point;
+	cv::Point point;
 	char key = 0;
 	bool halt = false;
 	while (key != 27)
@@ -189,9 +193,10 @@ cv::Point findLaserDotByRGB(cv::Mat& image)
 	// Return (-1, -1) when more than one blob was found. Otherwise, see if the x and y delta are
 	// within limits to return (0, 0). In all other cases, return the 
 	cv::findContours(dot, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
-	if (contours.size() != 1)
-		return cv::Point(-1, -1);
-	return  contours.at(0).at(0);
+	if (contours.size() == 1)
+		return contours.at(0).at(0);
+
+	return cv::Point(-1, -1);
 }
 
 /*
@@ -199,11 +204,10 @@ cv::Point findLaserDotByRGB(cv::Mat& image)
  * findLaserDotByHSV()                                                                            *
  * ---------------------------------------------------------------------------------------------- *
  */
-cv::Point2d findLaserDotByHSV(cv::Mat& image)
+cv::Point findLaserDotByHSV(cv::Mat& image)
 {
 	cv::Mat hsv;
 	cv::Mat channels[3], dot1, dot2, dot;
-	cv::Point2d result;
 
 	cv::imshow("Source", image);
 	cv::moveWindow("Source", 1000, 0);
@@ -228,12 +232,9 @@ cv::Point2d findLaserDotByHSV(cv::Mat& image)
 	for (int y = 0; y < dot.rows; y++)
 		for (int x = 0; x < dot.cols; x++)
 			if (dot.at<uchar>(y, x) == 255)
-			{
-				result = cv::Point2d(x, y);
-				return result;
-			}
+				return cv::Point2d(x, y);
 
-	return cv::Point2d(-1, -1);
+	return cv::Point(-1, -1);
 }
 
 /*
@@ -241,10 +242,9 @@ cv::Point2d findLaserDotByHSV(cv::Mat& image)
  * findLaserDotByHSVOtsu()                                                                        *
  * ---------------------------------------------------------------------------------------------- *
  */
-cv::Point2d findLaserDotByHSVOtsu(cv::Mat& image)
+cv::Point findLaserDotByHSVOtsu(cv::Mat& image)
 {
 	cv::Mat hsv, channels[3], dot;
-	cv::Point2d result;
 
 	cv::imshow("Source", image);
 	cv::moveWindow("Source", 500, 0);
@@ -262,12 +262,9 @@ cv::Point2d findLaserDotByHSVOtsu(cv::Mat& image)
 	for (int y = 0; y < dot.rows; y++)
 		for (int x = 0; x < dot.cols; x++)
 			if (dot.at<uchar>(y, x) == 255)
-			{
-				result = cv::Point2d(x, y);
-				return result;
-			}
+				return cv::Point(x, y);
 
-	return cv::Point2d(-1, -1);
+	return cv::Point(-1, -1);
 }
 
 /*
@@ -275,11 +272,11 @@ cv::Point2d findLaserDotByHSVOtsu(cv::Mat& image)
  * findLaserDotByBlobDetection()                                                                  *
  * ---------------------------------------------------------------------------------------------- *
  */
-cv::Point2d findLaserDotByBlobDetection(cv::Mat& image, cv::Ptr<cv::SimpleBlobDetector>& detector)
+cv::Point findLaserDotByBlobDetection(cv::Mat& image, cv::Ptr<cv::SimpleBlobDetector>& detector)
 {
 	std::vector<cv::KeyPoint> keypoints;
 	cv::Mat gray, blob;
-	cv::Point2d result;
+	cv::Point result;
 
 	cv::imshow("Source", image);
 	cv::moveWindow("Source", 1000, 0);
@@ -292,6 +289,7 @@ cv::Point2d findLaserDotByBlobDetection(cv::Mat& image, cv::Ptr<cv::SimpleBlobDe
 
 	if (keypoints.size() == 1)
 		return cv::Point2d(keypoints[0].pt.x, keypoints[0].pt.y);
+
 	return cv::Point2d(-1, -1);
 }
 
@@ -311,7 +309,7 @@ void initRobot(ArRobot& robot, int argc, char** argv)
 	// Try to get a connection to the robot.
 	if (!c.connectRobot())
 	{
-		ArLog::log(ArLog::Terse, "Kon geen verbinding maken met de P3-DX.");
+		ArLog::log(ArLog::Terse, "Could not connect to P3-DX.");
 		if (p.checkHelpAndWarnUnparsed())
 		{
 			Aria::logOptions();
@@ -322,7 +320,7 @@ void initRobot(ArRobot& robot, int argc, char** argv)
 	// See if all command line parameters can be parsed.
 	if (!Aria::parseArgs() || !p.checkHelpAndWarnUnparsed())
 	{
-		ArLog::log(ArLog::Terse, "Kon de command line arguments niet parsen.");
+		ArLog::log(ArLog::Terse, "Could not parse command line arguments.");
 		Aria::logOptions();
 		Aria::exit(1);
 	}
@@ -341,6 +339,7 @@ void initRobot(ArRobot& robot, int argc, char** argv)
  */
 void controlRobot(ArRobot& robot, double deltaX, double deltaY)
 {
+	assert(deltaX >= -1 && deltaX <= 1 && deltaY >= -1 && deltaY <= 1);
 	robot.lock();
 	robot.setVel(ROBOT_MAX_DRIVING_SPEED * deltaY);
 	robot.setRotVel(ROBOT_MAX_ROTATING_SPEED * deltaX);

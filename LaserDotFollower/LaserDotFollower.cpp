@@ -44,6 +44,7 @@
  */
 
 #include <iostream>
+
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -56,17 +57,16 @@
 
 #define CAMERA_NUMBER				1
 
-#define ROBOT_MAX_DRIVING_SPEED		50.0 //500
-#define ROBOT_MAX_ROTATING_SPEED	25.0 //100
+#define AGV_AVAILABLE
+
+#define ROBOT_MAX_DRIVING_SPEED		500
+#define ROBOT_MAX_ROTATING_SPEED	100
 
 cv::Ptr<cv::SimpleBlobDetector> getBlobDetector();
 cv::Point findLaserDotByRGB(cv::Mat& image);
 cv::Point findLaserDotByHSV(cv::Mat& image);
 cv::Point findLaserDotByHSVOtsu(cv::Mat& image);
 cv::Point findLaserDotByBlobDetection(cv::Mat& image, cv::Ptr<cv::SimpleBlobDetector>& detector);
-void initRobot(ArRobot& robot, int argc, char** argv);
-void controlRobot(ArRobot& robot, double deltaX, double deltaY);
-void shutdownRobot(ArRobot& robot);
 
 /*
  * ---------------------------------------------------------------------------------------------- *
@@ -75,8 +75,6 @@ void shutdownRobot(ArRobot& robot);
  */
 int main(int argc, char** argv)
 {
-	ArRobot robot;
-	bool robotEnabled = true;
 	cv::Ptr<cv::SimpleBlobDetector> detector;
 
 	// Try to open the camera.
@@ -88,9 +86,41 @@ int main(int argc, char** argv)
 		return -1;
 	}
 
-	// Connect to the robot, when appropriate.
-	if (robotEnabled)
-		initRobot(robot, argc, argv);
+#ifdef AGV_AVAILABLE
+	Aria::init();
+	ArArgumentParser p(&argc, argv);
+	p.loadDefaultArguments();
+
+	// It is important to create the ArRobot object *after* the call to loadDefaultArguments() on
+	// the ArArgumentParser.
+	ArRobot robot;
+	ArRobotConnector c(&p, &robot);
+
+	// Try to get a connection to the robot.
+	if (!c.connectRobot())
+	{
+		ArLog::log(ArLog::Terse, "Could not connect to P3-DX.");
+		if (p.checkHelpAndWarnUnparsed())
+		{
+			Aria::logOptions();
+			Aria::exit(1);
+		}
+	}
+
+	// See if all command line parameters can be parsed.
+	if (!Aria::parseArgs() || !p.checkHelpAndWarnUnparsed())
+	{
+		ArLog::log(ArLog::Terse, "Could not parse command line arguments.");
+		Aria::logOptions();
+		Aria::exit(1);
+	}
+
+	robot.lock();
+	robot.runAsync(true);
+	robot.disableSonar();
+	robot.enableMotors();
+	robot.unlock();
+#endif
 
 	detector = getBlobDetector();
 
@@ -114,11 +144,20 @@ int main(int argc, char** argv)
 		}
 
 		cv::flip(image, image, 0);
-		//point = findLaserDotByBlobDetection(image, detector);
-		//point = findLaserDotByHSV(image);
+		//point = findLaserDotByRGB(image);
+		point = findLaserDotByHSV(image);
 		//point = findLaserDotByHSVOtsu(image);
-		point = findLaserDotByRGB(image);
-		if (point.x != -1 && point.y != -1)
+		//point = findLaserDotByBlobDetection(image, detector);
+		if (point.x == -1 && point.y == -1)
+		{
+#ifdef AGV_AVAILABLE
+			robot.lock();
+			robot.setVel(0.0);
+			robot.setRotVel(0.0);
+			robot.unlock();
+#endif
+		}
+		else
 		{
 			double halfWidth = image.size().width / 2.0;
 			double halfHeight = image.size().height / 2.0;
@@ -130,17 +169,27 @@ int main(int argc, char** argv)
 				deltaY = 0.0;
 			}
 			std::cout << "Delta is " << deltaX << ',' << deltaY << std::endl;
-			if (robotEnabled)
-				controlRobot(robot, deltaX, deltaY);
+			assert(deltaX >= -1 && deltaX <= 1 && deltaY >= -1 && deltaY <= 1);
+#ifdef AGV_AVAILABLE
+			robot.lock();
+			robot.setVel(ROBOT_MAX_DRIVING_SPEED * deltaY);
+			robot.setRotVel(ROBOT_MAX_ROTATING_SPEED * deltaX);
+			robot.unlock();
+#endif
 		}
 
 		// Wait 40 msec (if not halted), thus obtaining a theoretical fps of 25.
 		key = cv::waitKey(halt == true ? 0 : 40);
 	}
 
-	// Shut down the robot, when appropriate.
-	if (robotEnabled)
-		shutdownRobot(robot);
+	// Shut down the robot.
+#ifdef AGV_AVAILABLE
+	robot.lock();
+	robot.disableMotors();
+	robot.stopRunning();
+	robot.waitForRunExit();
+	robot.unlock();
+#endif
 }
 
 /*
@@ -208,6 +257,7 @@ cv::Point findLaserDotByHSV(cv::Mat& image)
 {
 	cv::Mat hsv;
 	cv::Mat channels[3], dot1, dot2, dot;
+	std::vector<std::vector<cv::Point>> contours;
 
 	cv::imshow("Source", image);
 	cv::moveWindow("Source", 1000, 0);
@@ -220,19 +270,18 @@ cv::Point findLaserDotByHSV(cv::Mat& image)
 	cv::imshow("Dot1", dot1);
 	cv::moveWindow("Dot1", 500, 300);
 
-	cv::inRange(hsv, cv::Scalar(165, 230, 230), cv::Scalar(180, 255, 255), dot2);
-	cv::dilate(dot2, dot2, cv::getStructuringElement(cv::MORPH_RECT, cv::Size(7, 7)));
-	cv::imshow("Dot2", dot2);
-	cv::moveWindow("Dot2", 1000, 300);
+	//::inRange(hsv, cv::Scalar(165, 230, 230), cv::Scalar(180, 255, 255), dot2);
+	//cv::dilate(dot2, dot2, cv::getStructuringElement(cv::MORPH_RECT, cv::Size(7, 7)));
+	//cv::imshow("Dot2", dot2);
+	//cv::moveWindow("Dot2", 1000, 300);
 
-	cv::bitwise_or(dot1, dot2, dot);
+	cv::bitwise_or(dot1, dot1, dot);
 	cv::imshow("Dot", dot);
 	cv::moveWindow("Dot", 1000, 600);
 
-	for (int y = 0; y < dot.rows; y++)
-		for (int x = 0; x < dot.cols; x++)
-			if (dot.at<uchar>(y, x) == 255)
-				return cv::Point2d(x, y);
+	cv::findContours(dot, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
+	if (contours.size() == 1)
+		return contours.at(0).at(0);
 
 	return cv::Point(-1, -1);
 }
@@ -245,6 +294,7 @@ cv::Point findLaserDotByHSV(cv::Mat& image)
 cv::Point findLaserDotByHSVOtsu(cv::Mat& image)
 {
 	cv::Mat hsv, channels[3], dot;
+	std::vector<std::vector<cv::Point>> contours;
 
 	cv::imshow("Source", image);
 	cv::moveWindow("Source", 500, 0);
@@ -259,10 +309,9 @@ cv::Point findLaserDotByHSVOtsu(cv::Mat& image)
 	cv::imshow("Dot", dot);
 	cv::moveWindow("Dot", 900, 600);
 
-	for (int y = 0; y < dot.rows; y++)
-		for (int x = 0; x < dot.cols; x++)
-			if (dot.at<uchar>(y, x) == 255)
-				return cv::Point(x, y);
+	cv::findContours(dot, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
+	if (contours.size() == 1)
+		return contours.at(0).at(0);
 
 	return cv::Point(-1, -1);
 }
@@ -288,74 +337,7 @@ cv::Point findLaserDotByBlobDetection(cv::Mat& image, cv::Ptr<cv::SimpleBlobDete
 	cv::moveWindow("Blob", 1000, 500);
 
 	if (keypoints.size() == 1)
-		return cv::Point2d(keypoints[0].pt.x, keypoints[0].pt.y);
+		return cv::Point(keypoints[0].pt.x, keypoints[0].pt.y);
 
-	return cv::Point2d(-1, -1);
-}
-
-/*
- * ---------------------------------------------------------------------------------------------- *
- * initRobot()                                                                                    *
- * ---------------------------------------------------------------------------------------------- *
- */
-void initRobot(ArRobot& robot, int argc, char** argv)
-{
-	// Connect to the robot.
-	Aria::init();
-	ArArgumentParser p(&argc, argv);
-	p.loadDefaultArguments();
-	ArRobotConnector c(&p, &robot);
-
-	// Try to get a connection to the robot.
-	if (!c.connectRobot())
-	{
-		ArLog::log(ArLog::Terse, "Could not connect to P3-DX.");
-		if (p.checkHelpAndWarnUnparsed())
-		{
-			Aria::logOptions();
-			Aria::exit(1);
-		}
-	}
-
-	// See if all command line parameters can be parsed.
-	if (!Aria::parseArgs() || !p.checkHelpAndWarnUnparsed())
-	{
-		ArLog::log(ArLog::Terse, "Could not parse command line arguments.");
-		Aria::logOptions();
-		Aria::exit(1);
-	}
-
-	robot.lock();
-	robot.runAsync(true);
-	robot.disableSonar();
-	robot.enableMotors();
-	robot.unlock();
-}
-
-/*
- * ---------------------------------------------------------------------------------------------- *
- * controlRobot()                                                                                 *
- * ---------------------------------------------------------------------------------------------- *
- */
-void controlRobot(ArRobot& robot, double deltaX, double deltaY)
-{
-	assert(deltaX >= -1 && deltaX <= 1 && deltaY >= -1 && deltaY <= 1);
-	robot.lock();
-	robot.setVel(ROBOT_MAX_DRIVING_SPEED * deltaY);
-	robot.setRotVel(ROBOT_MAX_ROTATING_SPEED * deltaX);
-	robot.unlock();
-}
-
-/*
- * ---------------------------------------------------------------------------------------------- *
- * shutdownRobot()                                                                                *
- * ---------------------------------------------------------------------------------------------- *
- */
-void shutdownRobot(ArRobot& robot)
-{
-	robot.lock();
-	robot.disableMotors();
-	robot.stopRunning();
-	robot.waitForRunExit();
-	robot.unlock();
+	return cv::Point(-1, -1);
 }

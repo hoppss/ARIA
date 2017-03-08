@@ -15,25 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Demonstration.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <Image Include="Gears.bmp">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="Shapes.bmp">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="Menu.bmp">
-      <Filter>Resource Files</Filter>
-    </Image>
-  </ItemGroup>
-  <ItemGroup>
     <ClCompile Include="LaserDotFollower.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

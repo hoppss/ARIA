@@ -19,13 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="BasicMorphologyDemo.cpp" />
-    <ClCompile Include="BitPlaneSlicingDemo.cpp" />
-    <ClCompile Include="BlobDetectionDemo.cpp" />
-    <ClCompile Include="Demonstration.cpp" />
-    <ClCompile Include="Main.cpp" />
-    <ClCompile Include="RegionOfInterestDemo.cpp" />
-    <ClCompile Include="Source.cpp" />
+    <ClCompile Include="BallFollower.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{2f1ecdf2-924d-4477-9521-5a25e4446a27}</ProjectGuid>
@@ -96,11 +90,12 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>D:\Library\opencv\3.1.0\build\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Program Files\MobileRobots\Aria\include;D:\Library\opencv\3.2.0\build\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>D:\Library\opencv\3.1.0\build\x64\vc14\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>opencv_world310d.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\Program Files\MobileRobots\Aria\lib64;D:\Library\opencv\3.2.0\build\x64\vc14\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>AriaDebugVC14.lib;opencv_world320d.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">

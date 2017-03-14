@@ -19,7 +19,11 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="AGV.cpp" />
     <ClCompile Include="BallFollower.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="AGV.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{2f1ecdf2-924d-4477-9521-5a25e4446a27}</ProjectGuid>

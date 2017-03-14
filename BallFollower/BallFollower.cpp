@@ -1,47 +1,47 @@
 /*
-* This program is a testbed for testing various vision algorithms that enable a Pioneer P3-DX
-* robot to follow a laser dot, as produced by a standard laser pointer.
-*
-* Joost van Stuijvenberg
-* Avans Hogeschool Breda
-* March 2017
-*
-* CC BY-SA 4.0, see: https://creativecommons.org/licenses/by-sa/4.0/
-* sources & updates: https://github.com/joostvanstuijvenberg/ARIA
-*
-* You are free to:
-*    Share — copy and redistribute the material in any medium or format
-*    Adapt — remix, transform, and build upon the material for any purpose, even commercially.
-*
-* The licensor cannot revoke these freedoms as long as you follow the license terms.
-*
-* Under the following terms:
-*    Attribution — You must give appropriate credit, provide a link to the license, and indicate
-*                  if changes were made. You may do so in any reasonable manner, but not in any
-* 	                way that suggests the licensor endorses you or your use.
-*    ShareAlike  — If you remix, transform, or build upon the material, you must distribute your
-*                  contributions under the same license as the original.
-*
-* No additional restrictions — You may not apply legal terms or technological measures that
-* legally restrict others from doing anything the license permits.
-*
-* Notices:
-*    You do not have to comply with the license for elements of the material in the public domain
-*    or where your use is permitted by an applicable exception or limitation. No warranties are
-*    given. The license may not give you all of the permissions necessary for your intended use.
-*    For example, other rights such as publicity, privacy, or moral rights may limit how you use
-*    the material.
-*
-* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR
-* IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
-* AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
-* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-* SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-* THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-* OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-* POSSIBILITY OF SUCH DAMAGE.
-*/
+ * This program is a testbed for testing various vision algorithms that enable a Pioneer P3-DX
+ * robot to follow a coloured plastic ball.
+ *
+ * Joost van Stuijvenberg
+ * Avans Hogeschool Breda
+ * March 2017
+ *
+ * CC BY-SA 4.0, see: https://creativecommons.org/licenses/by-sa/4.0/
+ * sources & updates: https://github.com/joostvanstuijvenberg/ARIA
+ *
+ * You are free to:
+ *    Share — copy and redistribute the material in any medium or format
+ *    Adapt — remix, transform, and build upon the material for any purpose, even commercially.
+ *
+ * The licensor cannot revoke these freedoms as long as you follow the license terms.
+ *
+ * Under the following terms:
+ *    Attribution — You must give appropriate credit, provide a link to the license, and indicate
+ *                  if changes were made. You may do so in any reasonable manner, but not in any
+ * 	                way that suggests the licensor endorses you or your use.
+ *    ShareAlike  — If you remix, transform, or build upon the material, you must distribute your
+ *                  contributions under the same license as the original.
+ *
+ * No additional restrictions — You may not apply legal terms or technological measures that
+ * legally restrict others from doing anything the license permits.
+ *
+ * Notices:
+ *    You do not have to comply with the license for elements of the material in the public domain
+ *    or where your use is permitted by an applicable exception or limitation. No warranties are
+ *    given. The license may not give you all of the permissions necessary for your intended use.
+ *    For example, other rights such as publicity, privacy, or moral rights may limit how you use
+ *    the material.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
 
 #include <iostream>
 
@@ -50,7 +50,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/features2d/features2d.hpp>
 
-#include "Aria.h"
+#include "AGV.h"
 
 // Suppress the console window (in Visual Studio).
 //#pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
@@ -63,20 +63,18 @@
 #define ROBOT_MAX_ROTATING_SPEED	100
 
 cv::Ptr<cv::SimpleBlobDetector> getBlobDetector();
-cv::Point findLaserDotByRGB(cv::Mat& image);
-cv::Point findLaserDotByHSV(cv::Mat& image);
-cv::Point findLaserDotByHSVOtsu(cv::Mat& image);
-cv::Point findLaserDotByBlobDetection(cv::Mat& image, cv::Ptr<cv::SimpleBlobDetector>& detector);
+cv::Point findBallByRGB(cv::Mat& image);
+cv::Point findBallByHSV(cv::Mat& image);
+cv::Point findBallByHSVOtsu(cv::Mat& image);
+cv::Point findBallByBlobDetection(cv::Mat& image, cv::Ptr<cv::SimpleBlobDetector>& detector);
 
 /*
-* ---------------------------------------------------------------------------------------------- *
-* main()                                                                                         *
-* ---------------------------------------------------------------------------------------------- *
-*/
+ * ---------------------------------------------------------------------------------------------- *
+ * main()                                                                                         *
+ * ---------------------------------------------------------------------------------------------- *
+ */
 int main(int argc, char** argv)
 {
-	cv::Ptr<cv::SimpleBlobDetector> detector;
-
 	// Try to open the camera.
 	cv::VideoCapture camera(CAMERA_NUMBER);
 	if (!camera.isOpened())
@@ -90,9 +88,6 @@ int main(int argc, char** argv)
 	Aria::init();
 	ArArgumentParser p(&argc, argv);
 	p.loadDefaultArguments();
-
-	// It is important to create the ArRobot object *after* the call to loadDefaultArguments() on
-	// the ArArgumentParser.
 	ArRobot robot;
 	ArRobotConnector c(&p, &robot);
 
@@ -115,16 +110,11 @@ int main(int argc, char** argv)
 		Aria::exit(1);
 	}
 
-	robot.lock();
-	robot.runAsync(true);
-	robot.disableSonar();
-	robot.enableMotors();
-	robot.unlock();
+	AGV agv(argc, argv, &robot);
 #endif
+	cv::Ptr<cv::SimpleBlobDetector> detector = getBlobDetector();
 
-	detector = getBlobDetector();
-
-	// Repeatedly obtain an image from the camera and try to find the red laser dot.
+	// Repeatedly obtain an image from the camera and try to find the ball.
 	cv::Mat image;
 	cv::Point point;
 	char key = 0;
@@ -134,7 +124,6 @@ int main(int argc, char** argv)
 		if (key == 32)
 			halt = !halt;
 
-		// Obtain an image from the camera.
 		camera >> image;
 		if (image.empty())
 		{
@@ -144,25 +133,23 @@ int main(int argc, char** argv)
 		}
 
 		//cv::flip(image, image, -1);
-		//point = findLaserDotByRGB(image);
-		point = findLaserDotByHSV(image);
-		//point = findLaserDotByHSVOtsu(image);
-		//point = findLaserDotByBlobDetection(image, detector);
+		//point = findBallByRGB(image);
+		//point = findBallByHSV(image);
+		//point = findBallByHSVOtsu(image);
+		point = findBallByBlobDetection(image, detector);
 		if (point.x == -1 && point.y == -1)
 		{
 #ifdef AGV_AVAILABLE
-			robot.lock();
-			robot.setVel(0.0);
-			robot.setRotVel(0.0);
-			robot.unlock();
+			agv.rijden(0.0);
+			agv.draaien(0.0);
 #endif
 		}
 		else
 		{
 			double halfWidth = image.size().width / 2.0;
-			double halfHeight = image.size().height / 2.0;
+			double bottomHeight = image.size().height * 0.7;
 			double deltaX = (halfWidth - point.x) / halfWidth;
-			double deltaY = (halfHeight - point.y) / halfHeight;
+			double deltaY = (bottomHeight - point.y) / bottomHeight;
 			if (abs(deltaX) < 0.1 && abs(deltaY) < 0.1)
 			{
 				deltaX = 0.0;
@@ -171,44 +158,33 @@ int main(int argc, char** argv)
 			std::cout << "Delta is " << deltaX << ',' << deltaY << std::endl;
 			assert(deltaX >= -1 && deltaX <= 1 && deltaY >= -1 && deltaY <= 1);
 #ifdef AGV_AVAILABLE
-			robot.lock();
-			robot.setVel(ROBOT_MAX_DRIVING_SPEED * deltaY);
-			robot.setRotVel(ROBOT_MAX_ROTATING_SPEED * deltaX);
-			robot.unlock();
+			agv.rijden(ROBOT_MAX_DRIVING_SPEED * deltaY);
+			agv.draaien(ROBOT_MAX_ROTATING_SPEED * deltaX);
 #endif
 		}
 
 		// Wait 40 msec (if not halted), thus obtaining a theoretical fps of 25.
 		key = cv::waitKey(halt == true ? 0 : 40);
 	}
-
-	// Shut down the robot.
-#ifdef AGV_AVAILABLE
-	robot.lock();
-	robot.disableMotors();
-	robot.stopRunning();
-	robot.waitForRunExit();
-	robot.unlock();
-#endif
 }
 
 /*
-* ---------------------------------------------------------------------------------------------- *
-* getBlobDetector()                                                                              *
-* ---------------------------------------------------------------------------------------------- *
-*/
+ * ---------------------------------------------------------------------------------------------- *
+ * getBlobDetector()                                                                              *
+ * ---------------------------------------------------------------------------------------------- *
+ */
 cv::Ptr<cv::SimpleBlobDetector> getBlobDetector()
 {
 	// Setup a SimpleBlobDetector for detection of the laser dot.
 	cv::SimpleBlobDetector::Params params;
-	params.minThreshold = 50;
-	params.maxThreshold = 255;
-	params.thresholdStep = 5;
+	params.minThreshold = 45;
+	params.maxThreshold = 50;
+	params.thresholdStep = 1;
 	params.filterByArea = true;
-	params.minArea = 1;
-	params.maxArea = 20;
-	params.filterByColor = true;
-	params.blobColor = 255;
+	params.minArea = 100;
+	params.maxArea = 10000;
+	params.filterByColor = false;
+	//params.blobColor = 255;
 	params.filterByCircularity = false;
 	//params.minCircularity = 0.8;
 	//params.maxCircularity = 1.0;
@@ -219,11 +195,11 @@ cv::Ptr<cv::SimpleBlobDetector> getBlobDetector()
 }
 
 /*
-* ---------------------------------------------------------------------------------------------- *
-* findLaserDotByRGB()                                                                            *
-* ---------------------------------------------------------------------------------------------- *
-*/
-cv::Point findLaserDotByRGB(cv::Mat& image)
+ * ---------------------------------------------------------------------------------------------- *
+ * findBallByRGB()                                                                                *
+ * ---------------------------------------------------------------------------------------------- *
+ */
+cv::Point findBallByRGB(cv::Mat& image)
 {
 	cv::Mat dot;
 	std::vector<std::vector<cv::Point>> contours;
@@ -249,11 +225,11 @@ cv::Point findLaserDotByRGB(cv::Mat& image)
 }
 
 /*
-* ---------------------------------------------------------------------------------------------- *
-* findLaserDotByHSV()                                                                            *
-* ---------------------------------------------------------------------------------------------- *
-*/
-cv::Point findLaserDotByHSV(cv::Mat& image)
+ * ---------------------------------------------------------------------------------------------- *
+ * findBallByHSV()                                                                            *
+ * ---------------------------------------------------------------------------------------------- *
+ */
+cv::Point findBallByHSV(cv::Mat& image)
 {
 	cv::Mat hsv;
 	cv::Mat channels[3], dot1, dot2, dot;
@@ -287,11 +263,11 @@ cv::Point findLaserDotByHSV(cv::Mat& image)
 }
 
 /*
-* ---------------------------------------------------------------------------------------------- *
-* findLaserDotByHSVOtsu()                                                                        *
-* ---------------------------------------------------------------------------------------------- *
-*/
-cv::Point findLaserDotByHSVOtsu(cv::Mat& image)
+ * ---------------------------------------------------------------------------------------------- *
+ * findBallByHSVOtsu()                                                                        *
+ * ---------------------------------------------------------------------------------------------- *
+ */
+cv::Point findBallByHSVOtsu(cv::Mat& image)
 {
 	cv::Mat hsv, channels[3], dot;
 	std::vector<std::vector<cv::Point>> contours;
@@ -317,24 +293,34 @@ cv::Point findLaserDotByHSVOtsu(cv::Mat& image)
 }
 
 /*
-* ---------------------------------------------------------------------------------------------- *
-* findLaserDotByBlobDetection()                                                                  *
-* ---------------------------------------------------------------------------------------------- *
-*/
-cv::Point findLaserDotByBlobDetection(cv::Mat& image, cv::Ptr<cv::SimpleBlobDetector>& detector)
+ * ---------------------------------------------------------------------------------------------- *
+ * findBallByBlobDetection()                                                                  *
+ * ---------------------------------------------------------------------------------------------- *
+ */
+cv::Point findBallByBlobDetection(cv::Mat& image, cv::Ptr<cv::SimpleBlobDetector>& detector)
 {
 	std::vector<cv::KeyPoint> keypoints;
-	cv::Mat gray, blob;
+	cv::Mat color, hsv[3], hue, gray, blob;
 	cv::Point result;
 
 	cv::imshow("Source", image);
-	cv::moveWindow("Source", 1000, 0);
-	cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
+	cv::moveWindow("Source", 500, 0);
 
-	detector->detect(image, keypoints);
-	cv::drawKeypoints(gray, keypoints, blob, cv::Scalar(0, 0, 255), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+	cv::cvtColor(image, color, CV_BGR2HSV);
+	cv::split(color, hsv);
+	cv::imshow("Hue", hsv[0]);
+	cv::moveWindow("Hue", 600, 200);
+
+	//cv::inRange(hsv[0], 47, 51, gray);
+	//cv::imshow("Gray", gray);
+	//cv::moveWindow("Gray", 700, 400);
+
+	//cv::bitwise_and(hsv[0], image, grey);
+
+	detector->detect(hsv[0], keypoints);
+	cv::drawKeypoints(hsv[0], keypoints, blob, cv::Scalar(0, 0, 255), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
 	cv::imshow("Blob", blob);
-	cv::moveWindow("Blob", 1000, 500);
+	cv::moveWindow("Blob", 800, 400);
 
 	if (keypoints.size() == 1)
 		return cv::Point(keypoints[0].pt.x, keypoints[0].pt.y);

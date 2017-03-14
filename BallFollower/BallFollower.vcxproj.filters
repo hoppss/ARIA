@@ -18,5 +18,13 @@
     <ClCompile Include="BallFollower.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="AGV.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="AGV.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
